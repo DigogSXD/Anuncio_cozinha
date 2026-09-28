@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Usuários — RestaurantePro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-people me-2 text-primary"></i>Usuários do Sistema
+  </h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoUsuario">
+    <i class="bi bi-person-plus me-1"></i>Novo Usuário
+  </button>
+</div>
+
+<!-- ── Legenda de roles ──────────────────────────────────────────── -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <span class="badge bg-danger px-3 py-2">
+    <i class="bi bi-shield-lock me-1"></i>Admin — acesso total
+  </span>
+  <span class="badge bg-primary px-3 py-2">
+    <i class="bi bi-person-badge me-1"></i>Garçom — painel de pedidos
+  </span>
+  <span class="badge bg-warning text-dark px-3 py-2">
+    <i class="bi bi-fire me-1"></i>Cozinha — painel KDS
+  </span>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Tipo</th>
+            <th>Status</th>
+            <th>Criado em</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr class="{% if not u.ativo %}table-secondary{% endif %}">
+            <td class="fw-semibold">
+              {{ u.nome }}
+              {% if u.id == current_user.id %}
+                <span class="badge bg-secondary ms-1" style="font-size:.65rem">você</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ u.email }}</td>
+            <td>
+              {% if u.role == 'admin' %}
+                <span class="badge bg-danger">Admin</span>
+              {% elif u.role == 'garcom' %}
+                <span class="badge bg-primary">Garçom</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Cozinha</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.ativo %}
+                <span class="badge bg-success">Ativo</span>
+              {% else %}
+                <span class="badge bg-secondary">Inativo</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ u.criado_em.strftime('%d/%m/%Y') }}</td>
+            <td class="text-end">
+              <button class="btn btn-outline-primary btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalEditar{{ u.id }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+              {% if u.id != current_user.id %}
+              <form method="POST"
+                    action="{{ url_for('admin.excluir_usuario', usuario_id=u.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Excluir usuário {{ u.nome }}?')">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Modal Editar Usuário -->
+          <div class="modal fade" id="modalEditar{{ u.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <form method="POST"
+                    action="{{ url_for('admin.editar_usuario', usuario_id=u.id) }}">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Editar — {{ u.nome }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Nome</label>
+                      <input type="text" name="nome" class="form-control"
+                             value="{{ u.nome }}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">E-mail</label>
+                      <input type="email" name="email" class="form-control"
+                             value="{{ u.email }}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Tipo de Acesso</label>
+                      <select name="role" class="form-select">
+                        <option value="admin"   {% if u.role=='admin'   %}selected{% endif %}>Admin</option>
+                        <option value="garcom"  {% if u.role=='garcom'  %}selected{% endif %}>Garçom</option>
+                        <option value="cozinha" {% if u.role=='cozinha' %}selected{% endif %}>Cozinha</option>
+                      </select>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">
+                        Nova Senha <span class="text-muted small">(deixe em branco para manter)</span>
+                      </label>
+                      <input type="password" name="nova_senha" class="form-control"
+                             placeholder="••••••••" autocomplete="new-password">
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="ativo"
+                             id="ativo{{ u.id }}" {% if u.ativo %}checked{% endif %}>
+                      <label class="form-check-label" for="ativo{{ u.id }}">Usuário ativo</label>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-5">
+              Nenhum usuário cadastrado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Usuário -->
+<div class="modal fade" id="modalNovoUsuario" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.criar_usuario') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-person-plus me-2"></i>Novo Usuário
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome</label>
+            <input type="text" name="nome" class="form-control"
+                   placeholder="Nome completo" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">E-mail</label>
+            <input type="email" name="email" class="form-control"
+                   placeholder="usuario@restaurante.com" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Senha</label>
+            <input type="password" name="senha" class="form-control"
+                   placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Tipo de Acesso</label>
+            <select name="role" class="form-select">
+              <option value="garcom" selected>
+                <i class="bi bi-person-badge"></i> Garçom
+              </option>
+              <option value="cozinha">Cozinha</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary"
+                  data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar Usuário</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

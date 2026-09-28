@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Playlists — RestaurantePro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-collection-play me-2 text-primary"></i>Playlists
+  </h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaPlaylist">
+    <i class="bi bi-plus-lg me-1"></i>Nova Playlist
+  </button>
+</div>
+
+<div class="row g-3">
+  {% for pl in playlists %}
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold mb-0">{{ pl.nome }}</h6>
+          <span class="badge bg-secondary">{{ pl.midias|length }} mídias</span>
+        </div>
+        {% if pl.descricao %}
+          <p class="text-muted small mb-3">{{ pl.descricao }}</p>
+        {% endif %}
+        <div class="d-flex gap-2 mt-auto">
+          <a href="{{ url_for('admin.ver_playlist', pl_id=pl.id) }}"
+             class="btn btn-primary btn-sm flex-grow-1">
+            <i class="bi bi-pencil-square me-1"></i>Gerenciar Mídias
+          </a>
+          <form method="POST"
+                action="{{ url_for('admin.excluir_playlist', pl_id=pl.id) }}"
+                onsubmit="return confirm('Excluir playlist {{ pl.nome }} e todas as suas mídias?')">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info">
+      Nenhuma playlist cadastrada. Crie a primeira playlist para começar.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal Nova Playlist -->
+<div class="modal fade" id="modalNovaPlaylist" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.criar_playlist') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Nova Playlist</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome</label>
+            <input type="text" name="nome" class="form-control"
+                   placeholder="Ex: Promoções de Verão" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Descrição <span class="text-muted">(opcional)</span></label>
+            <textarea name="descricao" class="form-control" rows="2"
+                      placeholder="Descrição da playlist..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

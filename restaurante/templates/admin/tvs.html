@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}TVs — RestaurantePro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0"><i class="bi bi-display me-2 text-info"></i>Gerenciar TVs</h4>
+  <button class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalNovaTV">
+    <i class="bi bi-plus-lg me-1"></i>Nova TV
+  </button>
+</div>
+
+<!-- ── Tabela de TVs ─────────────────────────────────────────────────── -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th>Slug (URL)</th>
+            <th>Playlist</th>
+            <th>Status</th>
+            <th>URL do Player</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tv in tvs %}
+          <tr>
+            <td class="text-muted small">{{ tv.id }}</td>
+            <td class="fw-semibold">{{ tv.nome }}</td>
+            <td><code>/tv/{{ tv.slug }}</code></td>
+            <td>
+              {% if tv.playlist %}
+                <span class="badge bg-primary">{{ tv.playlist.nome }}</span>
+              {% else %}
+                <span class="badge bg-secondary">Sem playlist</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if tv.ativa %}
+                <span class="badge bg-success">Ativa</span>
+              {% else %}
+                <span class="badge bg-danger">Inativa</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{{ url_for('tv.player', slug=tv.slug) }}" target="_blank"
+                 class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-play-circle me-1"></i>Abrir Player
+              </a>
+            </td>
+            <td class="text-end">
+              <button class="btn btn-outline-primary btn-sm"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalEditarTV{{ tv.id }}">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="POST"
+                    action="{{ url_for('admin.excluir_tv', tv_id=tv.id) }}"
+                    class="d-inline"
+                    onsubmit="return confirm('Excluir TV {{ tv.nome }}?')">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+
+          <!-- Modal Editar TV -->
+          <div class="modal fade" id="modalEditarTV{{ tv.id }}" tabindex="-1">
+            <div class="modal-dialog">
+              <form method="POST" action="{{ url_for('admin.editar_tv', tv_id=tv.id) }}">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Editar TV — {{ tv.nome }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Nome</label>
+                      <input type="text" name="nome" class="form-control"
+                             value="{{ tv.nome }}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">
+                        Slug <span class="text-muted small">(aparece na URL: /tv/<b>slug</b>)</span>
+                      </label>
+                      <input type="text" name="slug" class="form-control"
+                             value="{{ tv.slug }}" required>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-semibold">Playlist</label>
+                      <select name="playlist_id" class="form-select">
+                        <option value="">— Nenhuma —</option>
+                        {% for pl in playlists %}
+                          <option value="{{ pl.id }}"
+                            {% if tv.playlist and tv.playlist.id == pl.id %}selected{% endif %}>
+                            {{ pl.nome }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="ativa"
+                             id="ativa{{ tv.id }}" {% if tv.ativa %}checked{% endif %}>
+                      <label class="form-check-label" for="ativa{{ tv.id }}">TV Ativa</label>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">
+              Nenhuma TV cadastrada ainda.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Nova TV ─────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalNovaTV" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.criar_tv') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Nova TV</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome</label>
+            <input type="text" name="nome" class="form-control"
+                   placeholder="Ex: TV Entrada" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Slug <span class="text-muted small">(URL: /tv/<b>slug</b>)</span>
+            </label>
+            <input type="text" name="slug" class="form-control"
+                   placeholder="Ex: 4  ou  bar  ou  todos" required>
+            <div class="form-text">Sem espaços nem caracteres especiais.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Playlist</label>
+            <select name="playlist_id" class="form-select">
+              <option value="">— Nenhuma —</option>
+              {% for pl in playlists %}
+                <option value="{{ pl.id }}">{{ pl.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-info text-white">Criar TV</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

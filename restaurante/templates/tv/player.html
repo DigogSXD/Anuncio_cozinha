@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TV {{ tv.slug }} — Player</title>
+  <style>
+    /* ── Reset total: a TV ocupa 100% da tela, sem barras ── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+    }
+
+    /* ── Container de mídia ── */
+    #media-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #media-img,
+    #media-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;        /* cobre a tela inteira sem distorcer */
+      display: none;
+    }
+
+    #media-img.ativo,
+    #media-video.ativo {
+      display: block;
+    }
+
+    /* ── Barra de progresso (só para imagens) ── */
+    #progresso-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      width: 0%;
+      background: rgba(255, 255, 255, 0.7);
+      transition: none;
+      z-index: 10;
+    }
+
+    /* ── Overlay de informação no canto ── */
+    #info-overlay {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: rgba(0,0,0,.45);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity .4s;
+    }
+
+    /* ── Tela de "sem conteúdo" ── */
+    #sem-conteudo {
+      display: none;
+      position: fixed;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #555;
+      background: #111;
+    }
+    #sem-conteudo.visivel { display: flex; }
+    #sem-conteudo svg { width: 80px; margin-bottom: 16px; opacity: .3; }
+    #sem-conteudo p { font-size: 1.2rem; opacity: .4; }
+
+    /* ── Fade entre mídias ── */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .fadeIn { animation: fadeIn .6s ease-in-out; }
+  </style>
+</head>
+<body>
+
+<div id="media-container">
+  <img  id="media-img"   src="" alt="mídia">
+  <video id="media-video" src="" muted playsinline preload="auto"></video>
+</div>
+
+<div id="progresso-bar"></div>
+
+<div id="info-overlay"></div>
+
+<div id="sem-conteudo">
+  <!-- Ícone TV -->
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+    <rect x="2" y="3" width="20" height="14" rx="2"/>
+    <path d="M8 21h8M12 17v4"/>
+  </svg>
+  <p>Nenhum conteúdo configurado para esta TV.</p>
+  <p style="font-size:.85rem;margin-top:8px">TV: <strong>{{ tv.slug }}</strong></p>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  PLAYER DE DIGITAL SIGNAGE
+//  Lógica:
+//    1. Busca a playlist via API JSON a cada RELOAD_INTERVAL minutos.
+//    2. Percorre as mídias em loop pela ordem definida no admin.
+//    3. Imagens ficam na tela pelo tempo configurado (duracao_seg).
+//    4. Vídeos rodam até o fim antes de avançar.
+//    5. Barra de progresso visual para imagens.
+//    6. Fade suave entre mídias.
+// ════════════════════════════════════════════════════════════════
+
+const SLUG            = "{{ tv.slug }}";
+const API_URL         = `/tv/${SLUG}/playlist.json`;
+const RELOAD_INTERVAL = 5 * 60 * 1000;   // recarrega playlist a cada 5 min
+
+let playlist   = [];
+let indiceAtual = 0;
+let timerImagem = null;
+let progressoInterval = null;
+
+const elImg        = document.getElementById('media-img');
+const elVideo      = document.getElementById('media-video');
+const elBarra      = document.getElementById('progresso-bar');
+const elInfo       = document.getElementById('info-overlay');
+const elSem        = document.getElementById('sem-conteudo');
+
+// ── Busca / atualiza a playlist do servidor ──────────────────────
+async function carregarPlaylist() {
+  try {
+    const res  = await fetch(API_URL);
+    const data = await res.json();
+    if (data.midias && data.midias.length > 0) {
+      playlist = data.midias;
+      elSem.classList.remove('visivel');
+    } else {
+      playlist = [];
+      elSem.classList.add('visivel');
+      esconderTudo();
+    }
+  } catch (e) {
+    console.warn('[Player] Falha ao carregar playlist:', e);
+  }
+}
+
+// ── Esconde todas as mídias ──────────────────────────────────────
+function esconderTudo() {
+  elImg.classList.remove('ativo', 'fadeIn');
+  elVideo.classList.remove('ativo', 'fadeIn');
+  elImg.src   = '';
+  elVideo.src = '';
+  elVideo.pause();
+  clearTimeout(timerImagem);
+  clearInterval(progressoInterval);
+  elBarra.style.width = '0%';
+}
+
+// ── Mostra o overlay de informação brevemente ────────────────────
+function mostrarInfo(texto) {
+  elInfo.textContent = texto;
+  elInfo.style.opacity = '1';
+  setTimeout(() => { elInfo.style.opacity = '0'; }, 2500);
+}
+
+// ── Exibe a mídia no índice atual e agenda a próxima ─────────────
+function exibirMidia() {
+  if (playlist.length === 0) return;
+
+  // Garante índice circular
+  indiceAtual = indiceAtual % playlist.length;
+  const midia = playlist[indiceAtual];
+
+  esconderTudo();
+
+  if (midia.tipo === 'imagem') {
+    exibirImagem(midia);
+  } else {
+    exibirVideo(midia);
+  }
+}
+
+// ── Exibição de IMAGEM ───────────────────────────────────────────
+function exibirImagem(midia) {
+  const duracao = (midia.duracao_seg || 10) * 1000;  // ms
+
+  elImg.src = `/static/${midia.arquivo}`;
+  elImg.classList.add('ativo', 'fadeIn');
+
+  mostrarInfo(`${midia.nome} · ${midia.duracao_seg}s`);
+
+  // Barra de progresso
+  let inicio = Date.now();
+  elBarra.style.transition = 'none';
+  elBarra.style.width = '0%';
+  requestAnimationFrame(() => {
+    elBarra.style.transition = `width ${duracao}ms linear`;
+    elBarra.style.width = '100%';
+  });
+
+  timerImagem = setTimeout(() => {
+    indiceAtual++;
+    exibirMidia();
+  }, duracao);
+}
+
+// ── Exibição de VÍDEO ────────────────────────────────────────────
+function exibirVideo(midia) {
+  elVideo.src = `/static/${midia.arquivo}`;
+  elVideo.currentTime = 0;
+  elVideo.classList.add('ativo', 'fadeIn');
+
+  mostrarInfo(`▶ ${midia.nome}`);
+
+  // Esconde barra de progresso para vídeos
+  elBarra.style.width = '0%';
+
+  elVideo.play().catch(err => {
+    // Autoplay bloqueado? Tenta avançar mesmo assim
+    console.warn('[Player] Autoplay bloqueado:', err);
+    setTimeout(() => { indiceAtual++; exibirMidia(); }, 3000);
+  });
+
+  elVideo.onended = () => {
+    indiceAtual++;
+    exibirMidia();
+  };
+
+  // Segurança: se o vídeo travar por mais de 2x a duração esperada,
+  // avança de qualquer forma (evita travar em vídeo corrompido)
+  elVideo.onerror = () => {
+    console.warn('[Player] Erro ao carregar vídeo, pulando...');
+    indiceAtual++;
+    exibirMidia();
+  };
+}
+
+// ── Inicialização ────────────────────────────────────────────────
+async function init() {
+  await carregarPlaylist();
+  if (playlist.length > 0) {
+    exibirMidia();
+  }
+
+  // Recarrega a playlist periodicamente (sem interromper a exibição atual)
+  setInterval(async () => {
+    const indiceAntes = indiceAtual;
+    await carregarPlaylist();
+    // Se a playlist mudou de tamanho, reinicia do início
+    if (playlist.length > 0 && indiceAntes >= playlist.length) {
+      indiceAtual = 0;
+    }
+  }, RELOAD_INTERVAL);
+}
+
+// ── Evita tela preta em modo fullscreen ─────────────────────────
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && playlist.length > 0) {
+    // Retomou visibilidade (ex: voltou do protetor de tela)
+    if (!elImg.classList.contains('ativo') &&
+        !elVideo.classList.contains('ativo')) {
+      exibirMidia();
+    }
+  }
+});
+
+// Clique duplo entra em fullscreen (útil para configurar a TV)
+document.addEventListener('dblclick', () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+});
+
+init();
+</script>
+</body>
+</html>

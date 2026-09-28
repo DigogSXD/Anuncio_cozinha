@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Mesas — RestaurantePro{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="bi bi-grid-3x3-gap me-2 text-success"></i>Mesas
+  </h4>
+  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNovaMesa">
+    <i class="bi bi-plus-lg me-1"></i>Adicionar Mesa
+  </button>
+</div>
+
+<!-- ── Definir quantidade de mesas em lote ──────────────────────── -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <h6 class="fw-bold mb-1">
+      <i class="bi bi-sliders me-2 text-primary"></i>Definir quantidade total de mesas
+    </h6>
+    <p class="text-muted small mb-3">
+      Define de uma vez quantas mesas o restaurante tem (1 a 200).
+      Mesas extras serão desativadas; mesas faltando serão criadas.
+    </p>
+    <form method="POST" action="{{ url_for('admin.definir_quantidade_mesas') }}"
+          class="d-flex gap-2 align-items-end flex-wrap">
+      <div>
+        <label class="form-label fw-semibold small mb-1">Número de mesas</label>
+        <input type="number" name="quantidade" class="form-control"
+               style="width:130px"
+               min="1" max="200"
+               value="{{ mesas | selectattr('ativa') | list | length }}"
+               required>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check2 me-1"></i>Aplicar
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Totalizadores ──────────────────────────────────────────────── -->
+<div class="d-flex gap-3 mb-3 flex-wrap">
+  <span class="badge bg-success fs-6 px-3 py-2">
+    {{ mesas | selectattr('ativa') | list | length }} ativas
+  </span>
+  <span class="badge bg-secondary fs-6 px-3 py-2">
+    {{ mesas | rejectattr('ativa') | list | length }} inativas
+  </span>
+  <span class="badge bg-dark fs-6 px-3 py-2">
+    {{ mesas | length }} total
+  </span>
+</div>
+
+<!-- ── Grid de mesas ─────────────────────────────────────────────── -->
+<div class="row g-2">
+  {% for mesa in mesas %}
+  <div class="col-4 col-sm-3 col-md-2 col-lg-1" style="min-width:100px">
+    <div class="card border-0 shadow-sm text-center h-100
+                {% if not mesa.ativa %}opacity-50{% endif %}">
+      <div class="card-body py-3 px-1">
+        <div class="fs-2 fw-bold {% if mesa.ativa %}text-success{% else %}text-secondary{% endif %}">
+          {{ mesa.numero }}
+        </div>
+        {% if mesa.descricao %}
+          <div class="small text-muted text-truncate px-1">{{ mesa.descricao }}</div>
+        {% endif %}
+        <div class="mt-1">
+          {% if mesa.ativa %}
+            <span class="badge bg-success" style="font-size:.65rem">Ativa</span>
+          {% else %}
+            <span class="badge bg-secondary" style="font-size:.65rem">Inativa</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-footer bg-white border-0 pb-2 px-1 d-flex gap-1 justify-content-center">
+        <!-- Ativar / Desativar -->
+        <form method="POST"
+              action="{{ url_for('admin.toggle_mesa', mesa_id=mesa.id) }}">
+          <button type="submit"
+                  class="btn btn-sm {% if mesa.ativa %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                  title="{% if mesa.ativa %}Desativar{% else %}Ativar{% endif %}">
+            <i class="bi {% if mesa.ativa %}bi-pause-fill{% else %}bi-play-fill{% endif %}"></i>
+          </button>
+        </form>
+        <!-- Excluir -->
+        <form method="POST"
+              action="{{ url_for('admin.excluir_mesa', mesa_id=mesa.id) }}"
+              onsubmit="return confirm('Remover Mesa {{ mesa.numero }}? Esta ação não pode ser desfeita.')">
+          <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir">
+            <i class="bi bi-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info">
+      Nenhuma mesa cadastrada. Use o campo acima para definir a quantidade.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Modal Adicionar Mesa Avulsa -->
+<div class="modal fade" id="modalNovaMesa" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('admin.criar_mesa') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Adicionar Mesa Avulsa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Número da Mesa</label>
+            <input type="number" name="numero" class="form-control"
+                   min="1" placeholder="Ex: 21" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Descrição <span class="text-muted">(opcional)</span>
+            </label>
+            <input type="text" name="descricao" class="form-control"
+                   placeholder="Ex: Varanda, VIP...">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">Criar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

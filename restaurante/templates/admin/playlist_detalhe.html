@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}{{ playlist.nome }} — Mídias{% endblock %}
+
+{% block extra_head %}
+<style>
+  .midia-card { cursor: grab; transition: box-shadow .2s; }
+  .midia-card:active { cursor: grabbing; }
+  .midia-card.sortable-ghost { opacity: .4; }
+  .thumb-preview { width:80px; height:60px; object-fit:cover; border-radius:4px; }
+  .thumb-video { width:80px; height:60px; background:#000; border-radius:4px;
+                 display:flex; align-items:center; justify-content:center; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a href="{{ url_for('admin.playlists') }}" class="text-muted small">
+      <i class="bi bi-arrow-left me-1"></i>Playlists
+    </a>
+    <h4 class="fw-bold mb-0 mt-1">
+      <i class="bi bi-collection-play me-2 text-primary"></i>{{ playlist.nome }}
+    </h4>
+  </div>
+  <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUpload">
+    <i class="bi bi-cloud-upload me-1"></i>Adicionar Mídia
+  </button>
+</div>
+
+<p class="text-muted">
+  Arraste os cards para reordenar. Imagens exibem pelo tempo configurado; vídeos rodam até o fim.
+</p>
+
+<!-- ── Lista de mídias (arrastável) ──────────────────────────────────── -->
+<div id="listaMidias" class="row g-3">
+  {% for midia in midias %}
+  <div class="col-12 col-md-6 col-lg-4 midia-card" data-id="{{ midia.id }}">
+    <div class="card border-0 shadow-sm h-100 {% if not midia.ativa %}opacity-50{% endif %}">
+      <div class="card-body d-flex gap-3 align-items-start">
+
+        <!-- Thumbnail -->
+        {% if midia.tipo == 'imagem' %}
+          <img src="{{ url_for('static', filename=midia.arquivo) }}"
+               class="thumb-preview" alt="{{ midia.nome }}">
+        {% else %}
+          <div class="thumb-video">
+            <i class="bi bi-play-circle fs-4"></i>
+          </div>
+        {% endif %}
+
+        <div class="flex-grow-1 min-width-0">
+          <div class="fw-semibold text-truncate">{{ midia.nome }}</div>
+          <div class="small text-muted mb-1">
+            {% if midia.tipo == 'imagem' %}
+              <i class="bi bi-image me-1"></i>Imagem · {{ midia.duracao_seg }}s
+            {% else %}
+              <i class="bi bi-camera-video me-1"></i>Vídeo · até o fim
+            {% endif %}
+          </div>
+          <span class="badge bg-secondary small">Ordem: {{ midia.ordem }}</span>
+        </div>
+
+        <!-- Ações -->
+        <div class="d-flex flex-column gap-1">
+          <button class="btn btn-outline-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalEditarMidia{{ midia.id }}">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <form method="POST"
+                action="{{ url_for('admin.excluir_midia', midia_id=midia.id) }}"
+                onsubmit="return confirm('Excluir {{ midia.nome }}?')">
+            <button type="submit" class="btn btn-outline-danger btn-sm">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar Mídia -->
+  <div class="modal fade" id="modalEditarMidia{{ midia.id }}" tabindex="-1">
+    <div class="modal-dialog">
+      <form method="POST" action="{{ url_for('admin.editar_midia', midia_id=midia.id) }}">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Mídia</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Nome de Exibição</label>
+              <input type="text" name="nome" class="form-control" value="{{ midia.nome }}" required>
+            </div>
+            {% if midia.tipo == 'imagem' %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Duração (segundos)</label>
+              <input type="number" name="duracao_seg" class="form-control"
+                     value="{{ midia.duracao_seg }}" min="1" max="300">
+            </div>
+            {% endif %}
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Ordem</label>
+              <input type="number" name="ordem" class="form-control"
+                     value="{{ midia.ordem }}" min="1">
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="ativa"
+                     id="midiaAtiva{{ midia.id }}" {% if midia.ativa %}checked{% endif %}>
+              <label class="form-check-label" for="midiaAtiva{{ midia.id }}">Ativa</label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="alert alert-info">
+      Nenhuma mídia nesta playlist ainda. Clique em "Adicionar Mídia" para começar.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Modal Upload ──────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalUpload" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <form method="POST"
+          action="{{ url_for('admin.upload_midia', pl_id=playlist.id) }}"
+          enctype="multipart/form-data">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-cloud-upload me-2"></i>Adicionar Mídia</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Arquivo</label>
+            <input type="file" name="arquivo" class="form-control"
+                   accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
+                   required id="inputArquivo">
+            <div class="form-text">Imagens: PNG, JPG, GIF, WEBP · Vídeos: MP4, WEBM</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nome de Exibição <span class="text-muted">(opcional)</span></label>
+            <input type="text" name="nome_exibicao" class="form-control"
+                   placeholder="Deixe em branco para usar o nome do arquivo">
+          </div>
+          <div class="mb-3" id="campoDuracao">
+            <label class="form-label fw-semibold">
+              Duração na tela <span class="text-muted small">(apenas para imagens)</span>
+            </label>
+            <div class="input-group" style="max-width:200px">
+              <input type="number" name="duracao_seg" class="form-control"
+                     value="10" min="1" max="300">
+              <span class="input-group-text">segundos</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-upload me-1"></i>Enviar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- SortableJS para drag-and-drop de reordenação -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+// Oculta campo de duração para vídeos
+document.getElementById('inputArquivo').addEventListener('change', function () {
+  const ext = this.value.split('.').pop().toLowerCase();
+  const isVideo = ['mp4','webm','ogg'].includes(ext);
+  document.getElementById('campoDuracao').style.display = isVideo ? 'none' : '';
+});
+
+// Drag-and-drop para reordenar mídias
+const lista = document.getElementById('listaMidias');
+if (lista) {
+  Sortable.create(lista, {
+    animation: 150,
+    ghostClass: 'sortable-ghost',
+    onEnd: function () {
+      const ordem = [...lista.querySelectorAll('.midia-card')].map(
+        el => parseInt(el.dataset.id)
+      );
+      fetch('{{ url_for("admin.reordenar_midias") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ordem })
+      });
+    }
+  });
+}
+</script>
+{% endblock %}

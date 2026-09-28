@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Comanda — Mesa {{ mesa.numero }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f1f3f5; padding-bottom: 110px; }
+
+    /* ── Barra superior ── */
+    .top-bar {
+      background: #212529; color: #fff;
+      padding: 0 16px;
+      height: 56px;
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 200;
+    }
+    .mesa-badge {
+      background: #ffc107; color: #000;
+      font-size: 1.1rem; font-weight: 900;
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .tipo-pill {
+      font-size: .65rem; font-weight: 700; padding: 2px 9px;
+      border-radius: 20px; text-transform: uppercase;
+    }
+    .pill-coletiva   { background:#198754; color:#fff; }
+    .pill-individual { background:#0d6efd; color:#fff; }
+
+    /* ── Abas de categorias ── */
+    .nav-cats {
+      display: flex; overflow-x: auto; gap: 8px;
+      padding: 10px 16px; background: #fff;
+      border-bottom: 1px solid #dee2e6;
+      scrollbar-width: none; position: sticky; top: 56px; z-index: 100;
+    }
+    .nav-cats::-webkit-scrollbar { display: none; }
+    .cat-tab {
+      flex-shrink: 0; padding: 6px 14px;
+      border-radius: 20px; border: 2px solid #dee2e6;
+      background: #fff; font-size: .8rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap; transition: all .15s;
+    }
+    .cat-tab.ativa { background:#212529; border-color:#212529; color:#fff; }
+
+    /* ── Seções de itens ── */
+    .secao { display: none; padding: 12px 16px 0; }
+    .secao.visivel { display: block; }
+    .secao-titulo {
+      font-size: .68rem; text-transform: uppercase;
+      letter-spacing: 1px; color: #6c757d;
+      font-weight: 700; margin-bottom: 10px;
+    }
+
+    /* ── Card de item ── */
+    .item-card {
+      background: #fff; border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 8px;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.07);
+    }
+    .item-nome  { font-weight: 600; font-size: .92rem; }
+    .item-preco { font-size: .78rem; color: #198754; font-weight: 600; }
+    .item-desc  { font-size: .72rem; color: #6c757d; }
+
+    /* ── Contador de quantidade ── */
+    .qty { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .qty button {
+      width: 30px; height: 30px; border-radius: 50%; border: none;
+      font-size: 1.1rem; display: flex; align-items: center;
+      justify-content: center; cursor: pointer; flex-shrink: 0;
+    }
+    .btn-dec { background: #dee2e6; color: #343a40; }
+    .btn-inc { background: #198754; color: #fff; }
+    .qty-val { min-width: 24px; text-align: center; font-weight: 700; }
+
+    /* ── Histórico de pedidos ── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    /* ── Barra inferior fixa ── */
+    .bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 1px solid #dee2e6;
+      padding: 12px 16px; z-index: 300;
+      box-shadow: 0 -4px 16px rgba(0,0,0,.1);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Barra superior -->
+<div class="top-bar">
+  <a href="{{ url_for('garcom.mesa', numero=mesa.numero) }}"
+     class="text-white text-decoration-none">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div class="mesa-badge">{{ mesa.numero }}</div>
+  <div class="flex-grow-1 min-w-0">
+    <div class="d-flex align-items-center gap-2">
+      <span class="fw-bold">Mesa {{ mesa.numero }}</span>
+      <span class="tipo-pill pill-{{ comanda.tipo }}">
+        {% if comanda.tipo == 'coletiva' %}
+          <i class="bi bi-people-fill me-1"></i>Coletiva
+        {% else %}
+          <i class="bi bi-person-fill me-1"></i>Individual
+        {% endif %}
+      </span>
+    </div>
+    <div class="small opacity-75 text-truncate">
+      {% if comanda.nome_cliente %}{{ comanda.nome_cliente }} · {% endif %}
+      Total: R$ <span id="totalComanda">{{ '%.2f'|format(comanda.total) | replace('.', ',') }}</span>
+    </div>
+  </div>
+  <a href="{{ url_for('garcom.fechar_comanda', comanda_id=comanda.id) }}"
+     class="btn btn-danger btn-sm fw-semibold">
+    <i class="bi bi-receipt-cutoff me-1"></i>Fechar
+  </a>
+</div>
+
+<!-- Flash -->
+<div class="px-3 pt-2">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 small alert-dismissible fade show mb-1">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+</div>
+
+<!-- Abas de categorias -->
+<div class="nav-cats" id="navCats">
+  <button class="cat-tab ativa" data-cat="historico" onclick="mudarAba('historico', this)">
+    <i class="bi bi-clock-history me-1"></i>Histórico
+  </button>
+  {% for cat in categorias %}
+    {% if cat.itens | selectattr('disponivel') | list %}
+      <button class="cat-tab" data-cat="cat{{ cat.id }}"
+              onclick="mudarAba('cat{{ cat.id }}', this)">
+        {{ cat.nome }}
+      </button>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<!-- ══════════════════════════════════════════
+     SEÇÃO: HISTÓRICO DE PEDIDOS
+══════════════════════════════════════════ -->
+<div class="secao visivel" id="secao-historico">
+  {% if pedidos %}
+    <div class="pt-3 px-3">
+    {% for pedido in pedidos %}
+    <div class="card border-0 shadow-sm mb-2" style="border-radius:12px;
+         {% if pedido.status == 'cancelado' %}opacity:.5{% endif %}">
+      <div class="card-body py-2 px-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="small text-muted">
+            <i class="bi bi-clock me-1"></i>{{ pedido.criado_em.strftime('%H:%M') }}
+            · Pedido #{{ pedido.id }}
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            {% set cores = {
+              'aguardando':'danger','em_preparo':'warning',
+              'pronto':'success','entregue':'secondary',
+              'cancelado':'dark'
+            } %}
+            <span class="badge bg-{{ cores.get(pedido.status,'secondary') }}">
+              {{ pedido.status.replace('_',' ').title() }}
+            </span>
+            {# Botão cancelar — só aparece se ainda não entregue nem cancelado #}
+            {% if pedido.status not in ('entregue', 'cancelado') %}
+            <form method="POST"
+                  action="{{ url_for('garcom.cancelar_pedido', pedido_id=pedido.id) }}"
+                  onsubmit="return confirm('Cancelar pedido #{{ pedido.id }}?')">
+              <button type="submit"
+                      class="btn btn-outline-danger btn-sm py-0 px-2"
+                      style="font-size:.7rem">
+                <i class="bi bi-x-lg"></i> Cancelar
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% for it in pedido.itens %}
+        <div class="d-flex justify-content-between small
+                    {% if pedido.status == 'cancelado' %}text-decoration-line-through text-muted{% endif %}">
+          <span><b>{{ it.quantidade }}×</b> {{ it.nome_item }}</span>
+          <span class="text-muted">
+            R$ {{ '%.2f'|format((it.quantidade * it.preco_unit)|float) | replace('.', ',') }}
+          </span>
+        </div>
+        {% endfor %}
+        {% if pedido.observacao %}
+          <div class="small text-warning mt-1">
+            <i class="bi bi-chat-left-text me-1"></i>{{ pedido.observacao }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-5 text-muted opacity-50">
+      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+      <p class="small">Nenhum pedido ainda.<br>Selecione uma categoria ao lado.</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════════════════════
+     SEÇÕES: ITENS POR CATEGORIA
+══════════════════════════════════════════ -->
+<form method="POST" action="{{ url_for('garcom.enviar_pedido') }}" id="formPedido">
+  <input type="hidden" name="comanda_id" value="{{ comanda.id }}">
+
+  {% for cat in categorias %}
+    {% set itens_disp = cat.itens | selectattr('disponivel') | list %}
+    {% if itens_disp %}
+    <div class="secao" id="secao-cat{{ cat.id }}">
+      <div class="secao-titulo">{{ cat.nome }}</div>
+      {% for item in itens_disp %}
+      <div class="item-card">
+        <div class="flex-grow-1 min-w-0">
+          <div class="item-nome">{{ item.nome }}</div>
+          {% if item.descricao %}
+            <div class="item-desc text-truncate">{{ item.descricao }}</div>
+          {% endif %}
+          <div class="item-preco">{{ item.preco | brl }}</div>
+        </div>
+        <div class="qty">
+          <button type="button" class="btn-dec"
+                  onclick="ajustar({{ item.id }}, -1)">−</button>
+          <span class="qty-val" id="qty-{{ item.id }}">0</span>
+          <button type="button" class="btn-inc"
+                  onclick="ajustar({{ item.id }}, +1)">+</button>
+        </div>
+        <input type="hidden" name="item_{{ item.id }}"
+               id="input-{{ item.id }}" value="0">
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endfor %}
+
+  <!-- Observação (fica fora das seções, sempre visível antes do envio) -->
+  <div class="px-3 pt-3" id="campoObs" style="display:none">
+    <label class="form-label small fw-semibold">Observação</label>
+    <textarea name="observacao" class="form-control form-control-sm"
+              rows="2" placeholder="Ex: sem cebola, bem passado..."></textarea>
+  </div>
+</form>
+
+<!-- Barra inferior fixa -->
+<div class="bottom-bar">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small text-muted" id="resumoItens">Nenhum item selecionado</span>
+    <span class="fw-bold fs-5 text-success" id="totalNovoPedido">R$ 0,00</span>
+  </div>
+  <button type="submit" form="formPedido"
+          class="btn btn-success w-100 fw-bold py-2"
+          id="btnEnviar" disabled>
+    <i class="bi bi-send me-2"></i>Enviar para a Cozinha
+  </button>
+</div>
+
+<!-- Outras comandas desta mesa -->
+{% if outras_comandas %}
+<div class="px-3 pt-3">
+  <p class="small fw-bold text-muted mb-2 text-uppercase">
+    <i class="bi bi-receipt me-1"></i>Outras Comandas desta Mesa
+  </p>
+  {% for oc in outras_comandas %}
+  <a href="{{ url_for('garcom.controle_comanda', comanda_id=oc.id) }}"
+     class="d-flex justify-content-between align-items-center
+            bg-white rounded-3 p-3 mb-2 text-decoration-none text-dark shadow-sm">
+    <div>
+      <span class="badge {% if oc.tipo=='coletiva' %}bg-success{% else %}bg-primary{% endif %} me-2">
+        {{ oc.tipo.title() }}
+      </span>
+      {% if oc.nome_cliente %}<span class="fw-semibold">{{ oc.nome_cliente }}</span>{% endif %}
+      <span class="small text-muted">{{ oc.pedidos|length }} pedido(s)</span>
+    </div>
+    <div class="fw-bold text-success">
+      R$ {{ '%.2f'|format(oc.total) | replace('.', ',') }}
+      <i class="bi bi-chevron-right ms-1 text-muted"></i>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Preços dos itens
+const precos = {
+  {% for cat in categorias %}{% for item in cat.itens %}
+    {{ item.id }}: {{ item.preco | float }},
+  {% endfor %}{% endfor %}
+};
+
+// Troca de abas
+function mudarAba(id, btn) {
+  document.querySelectorAll('.secao').forEach(s => s.classList.remove('visivel'));
+  document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('ativa'));
+  document.getElementById('secao-' + id)?.classList.add('visivel');
+  btn.classList.add('ativa');
+  atualizarTotal();
+}
+
+// Ajusta quantidade
+function ajustar(itemId, delta) {
+  const span  = document.getElementById('qty-' + itemId);
+  const input = document.getElementById('input-' + itemId);
+  let val = parseInt(span.textContent) + delta;
+  if (val < 0) val = 0;
+  if (val > 99) val = 99;
+  span.textContent = val;
+  input.value = val;
+  atualizarTotal();
+}
+
+// Atualiza totais e estado do botão
+function atualizarTotal() {
+  let total = 0, qtd = 0;
+  for (const [id, preco] of Object.entries(precos)) {
+    const q = parseInt(document.getElementById('qty-' + id)?.textContent || '0');
+    total += q * preco;
+    qtd   += q;
+  }
+  const btnEnviar = document.getElementById('btnEnviar');
+  const resumo    = document.getElementById('resumoItens');
+  const totalEl   = document.getElementById('totalNovoPedido');
+  const obsEl     = document.getElementById('campoObs');
+
+  btnEnviar.disabled = qtd === 0;
+  obsEl.style.display = qtd > 0 ? 'block' : 'none';
+  resumo.textContent = qtd === 0 ? 'Nenhum item selecionado' : `${qtd} item(ns)`;
+  totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+}
+</script>
+</body>
+</html>

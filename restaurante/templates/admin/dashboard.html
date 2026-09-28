@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — RestaurantePro{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── KPI Cards com gradiente ── */
+  .kpi-card {
+    border-radius: 20px !important;
+    border: none !important;
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,.18) !important; }
+
+  .kpi-card .blob {
+    position: absolute;
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.12);
+  }
+  .kpi-card .blob-1 { top: -40px; right: -35px; }
+  .kpi-card .blob-2 { bottom: -50px; left: -25px; width: 100px; height: 100px; }
+
+  .kpi-label {
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    font-weight: 700;
+    opacity: .85;
+  }
+  .kpi-value { font-size: 2.8rem; font-weight: 900; line-height: 1.1; }
+  .kpi-icon  {
+    font-size: 2.6rem;
+    opacity: .25;
+    position: absolute;
+    bottom: 14px; right: 18px;
+  }
+
+  .grad-purple { background: linear-gradient(135deg, #667eea, #764ba2); }
+  .grad-pink   { background: linear-gradient(135deg, #f093fb, #f5576c); }
+  .grad-blue   { background: linear-gradient(135deg, #4facfe, #00c6fb); }
+  .grad-green  { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+  /* ── Cards secundários ── */
+  .stat-card {
+    border-radius: 16px !important;
+    border: none !important;
+    transition: transform .2s;
+  }
+  .stat-card:hover { transform: translateY(-3px); }
+  .stat-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; flex-shrink: 0;
+  }
+
+  /* ── Atalhos ── */
+  .atalho-card {
+    border-radius: 18px !important;
+    border: none !important;
+    text-decoration: none;
+    transition: transform .18s, box-shadow .18s;
+    overflow: hidden;
+  }
+  .atalho-card:hover { transform: translateY(-5px); box-shadow: 0 10px 28px rgba(0,0,0,.12) !important; }
+  .atalho-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; margin: 0 auto 10px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Saudação -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">Olá, {{ current_user.nome.split()[0] }} 👋</h4>
+    <p class="text-muted small mb-0">Aqui está o resumo do seu restaurante hoje.</p>
+  </div>
+  <small class="text-muted d-none d-md-block">
+    <i class="bi bi-arrow-clockwise me-1"></i>Atualizado em tempo real
+  </small>
+</div>
+
+<!-- ════════════════════════════════════════
+     KPI CARDS — Linha principal
+════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card grad-purple shadow p-3" style="min-height:120px">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="kpi-label">Pedidos Hoje</div>
+      <div class="kpi-value">{{ total_pedidos_hoje }}</div>
+      <i class="bi bi-bag-check kpi-icon"></i>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card grad-pink shadow p-3" style="min-height:120px">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="kpi-label">Aguardando</div>
+      <div class="kpi-value">{{ aguardando }}</div>
+      <i class="bi bi-hourglass-split kpi-icon"></i>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card grad-blue shadow p-3" style="min-height:120px">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="kpi-label">Em Preparo</div>
+      <div class="kpi-value">{{ em_preparo }}</div>
+      <i class="bi bi-fire kpi-icon"></i>
+    </div>
+  </div>
+
+  <div class="col-6 col-lg-3">
+    <div class="card kpi-card grad-green shadow p-3" style="min-height:120px">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="kpi-label">Mesas Abertas</div>
+      <div class="kpi-value">{{ mesas_ativas }}</div>
+      <i class="bi bi-layout-text-window kpi-icon"></i>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════
+     STATS SECUNDÁRIOS
+════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+
+  <div class="col-4">
+    <div class="card stat-card shadow-sm h-100 p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon-wrap" style="background:#e0f7ff">
+          <i class="bi bi-display" style="color:#0dcaf0"></i>
+        </div>
+        <div>
+          <div class="kpi-label text-muted">TVs</div>
+          <div class="fs-4 fw-bold">{{ total_tvs }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-4">
+    <div class="card stat-card shadow-sm h-100 p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon-wrap" style="background:#f0e6ff">
+          <i class="bi bi-play-btn" style="color:#9b59b6"></i>
+        </div>
+        <div>
+          <div class="kpi-label text-muted">Mídias</div>
+          <div class="fs-4 fw-bold">{{ total_midias }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-4">
+    <div class="card stat-card shadow-sm h-100 p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div class="stat-icon-wrap" style="background:#fff8e1">
+          <i class="bi bi-egg-fried" style="color:#f39c12"></i>
+        </div>
+        <div>
+          <div class="kpi-label text-muted">Cardápio</div>
+          <div class="fs-4 fw-bold">{{ total_itens }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════════════════════════
+     ATALHOS RÁPIDOS
+════════════════════════════════════════ -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h6 class="fw-bold text-uppercase small text-muted mb-0" style="letter-spacing:.5px">
+    ⚡ Acesso Rápido
+  </h6>
+</div>
+
+<div class="row g-3 mb-2">
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('admin.tvs') }}"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#e0f7ff">
+        <i class="bi bi-display" style="color:#0dcaf0"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">TVs</div>
+    </a>
+  </div>
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('admin.playlists') }}"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#e8eeff">
+        <i class="bi bi-collection-play" style="color:#4361ee"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">Playlists</div>
+    </a>
+  </div>
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('admin.cardapio') }}"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#fff8e1">
+        <i class="bi bi-egg-fried" style="color:#f39c12"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">Cardápio</div>
+    </a>
+  </div>
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('admin.mesas') }}"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#e6fff2">
+        <i class="bi bi-grid-3x3-gap" style="color:#198754"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">Mesas</div>
+    </a>
+  </div>
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('admin.relatorios') }}"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#ffeaea">
+        <i class="bi bi-graph-up-arrow" style="color:#e74c3c"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">Gráficos</div>
+    </a>
+  </div>
+
+  <div class="col-4 col-md-2">
+    <a href="{{ url_for('cozinha.index') }}" target="_blank"
+       class="card atalho-card shadow-sm text-dark text-center p-3 h-100">
+      <div class="atalho-icon" style="background:#fff3e0">
+        <i class="bi bi-fire" style="color:#fd7e14"></i>
+      </div>
+      <div class="fw-semibold" style="font-size:.78rem">Cozinha</div>
+    </a>
+  </div>
+
+</div>
+
+{% endblock %}

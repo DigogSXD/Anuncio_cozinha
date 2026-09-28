@@ -1,0 +1,3 @@
+cd "c:\Users\Diogo\Desktop\Anuncio cozinha\restaurante"
+venv\Scripts\Activate.ps1
+python app.py

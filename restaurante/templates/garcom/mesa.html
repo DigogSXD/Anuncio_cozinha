@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Mesa {{ mesa.numero }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f1f3f5; padding-bottom: 32px; }
+
+    .top-bar {
+      background: #212529; color: #fff;
+      padding: 14px 20px;
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mesa-badge {
+      background: #ffc107; color: #000;
+      font-size: 1.3rem; font-weight: 900;
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Cartões de comanda */
+    .comanda-card {
+      border-radius: 16px;
+      border: none;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .comanda-header {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .comanda-coletiva  .comanda-header { background: #e8f5e9; }
+    .comanda-individual .comanda-header { background: #e3f2fd; }
+
+    .tipo-badge {
+      font-size: .7rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .badge-coletiva   { background: #198754; color: #fff; }
+    .badge-individual { background: #0d6efd; color: #fff; }
+
+    .comanda-total {
+      font-size: 1.4rem; font-weight: 900; color: #198754;
+    }
+
+    /* Tipo selector no modal */
+    .tipo-option {
+      border: 3px solid #dee2e6;
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .tipo-option:hover    { border-color: #adb5bd; }
+    .tipo-option.selected { border-color: #0d6efd; background: #e8f0fe; }
+    .tipo-option i        { font-size: 2rem; display: block; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- Barra superior -->
+<div class="top-bar">
+  <a href="{{ url_for('garcom.index') }}" class="text-white text-decoration-none">
+    <i class="bi bi-arrow-left fs-5"></i>
+  </a>
+  <div class="mesa-badge">{{ mesa.numero }}</div>
+  <div class="flex-grow-1">
+    <div class="fw-bold">Mesa {{ mesa.numero }}</div>
+    <div class="small opacity-75">
+      {% if comandas_abertas %}
+        {{ comandas_abertas|length }} comanda(s) aberta(s)
+      {% else %}
+        Mesa livre
+      {% endif %}
+    </div>
+  </div>
+  <!-- Sempre visível: botão abrir nova comanda -->
+  <button class="btn btn-success btn-sm fw-bold"
+          data-bs-toggle="modal" data-bs-target="#modalAbrir">
+    <i class="bi bi-plus-lg me-1"></i>Nova Comanda
+  </button>
+</div>
+
+<!-- Flash -->
+<div class="px-3 pt-2">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}{% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} py-2 small alert-dismissible fade show mb-1">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}{% endif %}
+  {% endwith %}
+</div>
+
+<!-- ── Sem comandas ──────────────────────────────────────────────── -->
+{% if not comandas_abertas %}
+<div class="text-center py-5 mt-4">
+  <i class="bi bi-receipt fs-1 text-muted opacity-50 d-block mb-3"></i>
+  <p class="text-muted">Mesa livre. Abra uma comanda para começar.</p>
+  <button class="btn btn-success btn-lg fw-bold px-5 mt-2"
+          data-bs-toggle="modal" data-bs-target="#modalAbrir">
+    <i class="bi bi-plus-lg me-2"></i>Abrir Comanda
+  </button>
+</div>
+
+<!-- ── Lista de comandas abertas ────────────────────────────────── -->
+{% else %}
+<div class="container-fluid px-3 pt-3">
+  {% for comanda in comandas_abertas %}
+  <div class="comanda-card mb-3 comanda-{{ comanda.tipo }}">
+
+    <div class="comanda-header">
+      <div>
+        <span class="tipo-badge badge-{{ comanda.tipo }}">
+          {% if comanda.tipo == 'coletiva' %}
+            <i class="bi bi-people-fill me-1"></i>Coletiva
+          {% else %}
+            <i class="bi bi-person-fill me-1"></i>Individual
+          {% endif %}
+        </span>
+        {% if comanda.nome_cliente %}
+          <span class="fw-bold ms-2">{{ comanda.nome_cliente }}</span>
+        {% endif %}
+        <div class="small text-muted mt-1">
+          Aberta às {{ comanda.aberta_em.strftime('%H:%M') }} ·
+          {{ comanda.pedidos|length }} pedido(s)
+        </div>
+      </div>
+      <div class="text-end">
+        <div class="comanda-total">R$ {{ '%.2f'|format(comanda.total) | replace('.', ',') }}</div>
+        <div class="small text-muted">consumido</div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 p-3 bg-white">
+      <!-- Lançar pedido -->
+      <a href="{{ url_for('garcom.controle_comanda', comanda_id=comanda.id) }}"
+         class="btn btn-dark flex-grow-1 fw-semibold">
+        <i class="bi bi-plus-circle me-1"></i>Lançar Pedido
+      </a>
+      <!-- Fechar conta -->
+      <a href="{{ url_for('garcom.fechar_comanda', comanda_id=comanda.id) }}"
+         class="btn btn-outline-danger fw-semibold">
+        <i class="bi bi-receipt-cutoff me-1"></i>Fechar Conta
+      </a>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL — Abrir nova comanda
+══════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalAbrir" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="POST"
+          action="{{ url_for('garcom.abrir_comanda', numero=mesa.numero) }}"
+          id="formAbrir">
+      <input type="hidden" name="tipo" id="inputTipo" value="coletiva">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">
+            <i class="bi bi-receipt me-2"></i>Abrir Comanda — Mesa {{ mesa.numero }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body pt-3">
+
+          <!-- Seletor de tipo -->
+          <p class="text-muted small mb-3">Como será a divisão da conta?</p>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <div class="tipo-option selected" id="optColetiva"
+                   onclick="selecionarTipo('coletiva')">
+                <i class="bi bi-people-fill text-success"></i>
+                <div class="fw-bold">Coletiva</div>
+                <div class="text-muted small mt-1">Todos pagam juntos</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="tipo-option" id="optIndividual"
+                   onclick="selecionarTipo('individual')">
+                <i class="bi bi-person-fill text-primary"></i>
+                <div class="fw-bold">Individual</div>
+                <div class="text-muted small mt-1">Cada um paga o seu</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nome do cliente (só para individual) -->
+          <div id="campoNome" style="display:none">
+            <label class="form-label fw-semibold">
+              Nome do Cliente <span class="text-muted">(opcional)</span>
+            </label>
+            <input type="text" name="nome_cliente" class="form-control"
+                   placeholder="Ex: João, Mesa VIP...">
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary"
+                  data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success fw-bold px-4">
+            <i class="bi bi-check-lg me-1"></i>Abrir Comanda
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function selecionarTipo(tipo) {
+  document.getElementById('inputTipo').value = tipo;
+
+  document.getElementById('optColetiva').classList.toggle('selected', tipo === 'coletiva');
+  document.getElementById('optIndividual').classList.toggle('selected', tipo === 'individual');
+
+  document.getElementById('campoNome').style.display =
+    tipo === 'individual' ? 'block' : 'none';
+}
+
+// Abre o modal automaticamente se a mesa estiver livre
+{% if not comandas_abertas %}
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = new bootstrap.Modal(document.getElementById('modalAbrir'));
+  modal.show();
+});
+{% endif %}
+</script>
+</body>
+</html>

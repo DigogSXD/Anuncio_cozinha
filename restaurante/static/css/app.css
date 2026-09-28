@@ -1,0 +1,122 @@
+/* ================================================================
+   app.css — Estilos globais do RestaurantePro
+   Bootstrap 5 é a base; aqui ficam os refinamentos e overrides.
+   ================================================================ */
+
+/* ── Variáveis ── */
+:root {
+  --brand:      #ffc107;
+  --brand-dark: #e0a800;
+  --sidebar-w:  240px;
+  --radius-lg:  14px;
+  --shadow-sm:  0 2px 8px rgba(0,0,0,.08);
+  --shadow-md:  0 4px 20px rgba(0,0,0,.12);
+}
+
+/* ── Body / layout geral ── */
+body {
+  font-size: .9375rem;
+}
+
+/* ── Navbar ── */
+.navbar-brand {
+  letter-spacing: .5px;
+}
+
+/* ── Cards gerais ── */
+.card {
+  border-radius: var(--radius-lg) !important;
+}
+.card-hover {
+  transition: transform .18s, box-shadow .18s;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ── Botões ── */
+.btn {
+  border-radius: 8px;
+}
+.btn-warning {
+  color: #000;
+}
+
+/* ── Tabelas ── */
+.table th {
+  font-size: .8rem;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.table td {
+  vertical-align: middle;
+}
+
+/* ── Badges ── */
+.badge {
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+/* ── Alertas flash menores ── */
+.alert {
+  border-radius: 10px;
+  font-size: .9rem;
+}
+
+/* ── Upload progress (usado no admin de mídias) ── */
+#upload-progress {
+  display: none;
+}
+
+/* ── Utilidade: truncar texto ── */
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Responsivo: esconde texto nos botões pequenos ── */
+@media (max-width: 576px) {
+  .btn-sm .btn-text { display: none; }
+  .navbar .btn .me-1 { margin-right: 0 !important; }
+}
+
+/* ── Scrollbar fina (webkit) ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
+
+/* ── Animação de entrada genérica ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fadeInUp .35s ease both;
+}
+
+/* ── Indicador de loading no polling ── */
+#kds-loading {
+  position: fixed;
+  top: 10px;
+  right: 16px;
+  width: 10px;
+  height: 10px;
+  background: #198754;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#kds-loading.ativo {
+  opacity: 1;
+  animation: pulsar .8s infinite alternate;
+}
+@keyframes pulsar {
+  from { transform: scale(1); }
+  to   { transform: scale(1.6); }
+}
